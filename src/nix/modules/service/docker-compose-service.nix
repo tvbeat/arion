@@ -12,14 +12,8 @@ let
 
   inherit (import ../../lib.nix { inherit lib; })
     link
-    dockerComposeRef
+    serviceRef
     ;
-
-  dockerComposeKitchenSink = ''
-    Analogous to the `docker run` counterpart.
-
-    ${dockerComposeRef "domainname-hostname-ipc-mac_address-privileged-read_only-shm_size-stdin_open-tty-user-working_dir"}
-  '';
 
   cap_add = lib.attrNames (lib.filterAttrs (name: value: value == true) config.service.capabilities);
   cap_drop = lib.attrNames (lib.filterAttrs (name: value: value == false) config.service.capabilities);
@@ -56,12 +50,12 @@ in
     service.volumes = mkOption {
       type = listOf types.unspecified;
       default = [];
-      description = dockerComposeRef "volumes";
+      description = serviceRef "volumes";
     };
     service.tmpfs = mkOption {
       type = listOf types.str;
       default = [];
-      description = dockerComposeRef "tmpfs";
+      description = serviceRef "tmpfs";
     };
     service.build.context = mkOption {
       type = nullOr str;
@@ -69,44 +63,49 @@ in
       description = ''
         Locates a Dockerfile to use for creating an image to use in this service.
 
-        ${dockerComposeRef "context"}
+        https://docs.docker.com/compose/compose-file/build/#context
       '';
     };
     service.hostname = mkOption {
       type = nullOr str;
       default = null;
-      description = dockerComposeKitchenSink;
+      description = ''
+        ${serviceRef "hostname"}
+      '';
     };
     service.tty = mkOption {
       type = nullOr bool;
       default = null;
-      description = dockerComposeKitchenSink;
+      description = ''
+        ${serviceRef "tty"}
+      '';
     };
     service.environment = mkOption {
       type = attrsOf (either str int);
       default = {};
-      description = dockerComposeRef "environment";
+      description = serviceRef "environment";
     };
     service.image = mkOption {
-      type = str;
-      description = dockerComposeRef "image";
+      type = nullOr str;
+      default = null;
+      description = serviceRef "image";
     };
     service.command = mkOption {
       type = nullOr types.unspecified;
       default = null;
-      description = dockerComposeRef "command";
+      description = serviceRef "command";
     };
     service.container_name = mkOption {
       type = nullOr types.str;
       default = null;
-      description = dockerComposeRef "container_name";
+      description = serviceRef "container_name";
     };
     service.depends_on =
       let conditionsModule = {
             options = {
               condition = mkOption {
                 type = enum ["service_started" "service_healthy" "service_completed_successfully"];
-                description = dockerComposeRef "depends_on";
+                description = serviceRef "depends_on";
                 default = "service_started";
               };
             };
@@ -114,10 +113,10 @@ in
        in mkOption {
          type = either (listOf str) (attrsOf (submodule conditionsModule));
          default = [];
-         description = dockerComposeRef "depends_on";
+         description = serviceRef "depends_on";
        };
     service.healthcheck = mkOption {
-      description = dockerComposeRef "healthcheck";
+      description = serviceRef "healthcheck";
       type = submodule ({ config, options, ...}: {
         options = {
           _out = mkOption {
@@ -130,30 +129,30 @@ in
             type = nullOr (listOf str);
             default = null;
             example = [ "CMD" "pg_isready" ];
-            description = dockerComposeRef "healthcheck";
+            description = serviceRef "healthcheck";
           };
           interval = mkOption {
             type = str;
             default = "30s";
             example = "1m";
-            description = dockerComposeRef "healthcheck";
+            description = serviceRef "healthcheck";
           };
           timeout = mkOption {
             type = str;
             default = "30s";
             example = "10s";
-            description = dockerComposeRef "healthcheck";
+            description = serviceRef "healthcheck";
           };
           start_period = mkOption {
             type = str;
             default = "0s";
             example = "30s";
-            description = dockerComposeRef "healthcheck";
+            description = serviceRef "healthcheck";
           };
           retries = mkOption {
             type = int;
             default = 3;
-            description = dockerComposeRef "healthcheck";
+            description = serviceRef "healthcheck";
           };
         };
       });
@@ -165,14 +164,14 @@ in
         See ${link "https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities"
         "`docker run --device` documentation"}
 
-        ${dockerComposeRef "devices"}
+        ${serviceRef "devices"}
       '';
     };
     service.dns = mkOption {
       type = listOf str;
       default = [];
       example = [ "8.8.8.8" "8.8.4.4" ];
-      description = dockerComposeRef "dns";
+      description = serviceRef "dns";
     };
     service.labels = mkOption {
       type = attrsOf str;
@@ -183,47 +182,53 @@ in
         "traefik.http.routers.my-service.rule" = "Host(`my-service.localhost`)";
         "traefik.http.routers.my-service.entrypoints" = "web";
       };
-      description = dockerComposeRef "labels";
+      description = serviceRef "labels";
     };
     service.links = mkOption {
       type = listOf str;
       default = [];
-      description = dockerComposeRef "links";
+      description = serviceRef "links";
     };
     service.external_links = mkOption {
       type = listOf str;
       default = [];
-      description = dockerComposeRef "external_links";
+      description = serviceRef "external_links";
     };
     service.extra_hosts = mkOption {
       type = listOf str;
       default = [];
-      description = dockerComposeRef "extra_hosts";
+      description = serviceRef "extra_hosts";
     };
     service.working_dir = mkOption {
       type = nullOr str;
       default = null;
-      description = dockerComposeKitchenSink;
+      description = ''
+        ${serviceRef "working_dir"}
+      '';
     };
     service.privileged = mkOption {
       type = nullOr bool;
       default = null;
-      description = dockerComposeKitchenSink;
+      description = ''
+        ${serviceRef "privileged"}
+      '';
     };
     service.entrypoint = mkOption {
       type = nullOr str;
       default = null;
-      description = dockerComposeRef "entrypoint";
+      description = serviceRef "entrypoint";
     };
     service.restart = mkOption {
       type = nullOr str;
       default = null;
-      description = dockerComposeRef "restart";
+      description = serviceRef "restart";
     };
     service.user = mkOption {
       type = nullOr str;
       default = null;
-      description = dockerComposeKitchenSink;
+      description = ''
+        ${serviceRef "user"}
+      '';
     };
     service.ports = mkOption {
       type = listOf types.unspecified;
@@ -231,38 +236,71 @@ in
       description = ''
         Expose ports on host. "host:container" or structured.
 
-        ${dockerComposeRef "ports"}
+        ${serviceRef "ports"}
       '';
     };
     service.expose = mkOption {
       type = listOf str;
       default = [];
-      description = dockerComposeRef "expose";
+      description = serviceRef "expose";
     };
     service.env_file = mkOption {
       type = listOf str;
       default = [];
-      description = dockerComposeRef "env_file";
+      description = serviceRef "env_file";
     };
     service.network_mode = mkOption {
       type = nullOr str;
       default = null;
-      description = dockerComposeRef "network_mode";
+      description = serviceRef "network_mode";
     };
-    service.networks = mkOption {
-      type = nullOr (listOf types.str);
-      default = null;
-      description = dockerComposeRef "networks";
-    };
+    service.networks =
+      let
+        networksModule = submodule ({ config, options, ...}: {
+          options = {
+            _out = mkOption {
+              internal = true;
+              readOnly = true;
+              default = lib.mapAttrs (k: opt: opt.value) (lib.filterAttrs (_: opt: opt.isDefined) { inherit (options) aliases ipv4_address ipv6_address link_local_ips priority; });
+            };
+            aliases = mkOption {
+              type = listOf str;
+              description = serviceRef "aliases";
+              default = [ ];
+            };
+            ipv4_address = mkOption {
+              type = str;
+              description = serviceRef "ipv4_address-ipv6_address";
+            };
+            ipv6_address = mkOption {
+              type = str;
+              description = serviceRef "ipv4_address-ipv6_address";
+            };
+            link_local_ips = mkOption {
+              type = listOf str;
+              description = serviceRef "link_local_ips";
+            };
+            priority = mkOption {
+              type = int;
+              description = serviceRef "priority";
+            };
+          };
+        });
+      in
+      mkOption {
+        type = either (listOf str) (attrsOf networksModule);
+        default = [];
+        description = serviceRef "networks";
+      };
     service.stop_signal = mkOption {
       type = nullOr str;
       default = null;
-      description = dockerComposeRef "stop_signal";
+      description = serviceRef "stop_signal";
     };
     service.sysctls = mkOption {
       type = attrsOf (either str int);
       default = {};
-      description = dockerComposeRef "sysctls";
+      description = serviceRef "sysctls";
     };
     service.capabilities = mkOption {
       type = attrsOf (nullOr bool);
@@ -273,13 +311,15 @@ in
 
         Setting a capability to `true` means that it will be
         "added". Setting it to `false` means that it will be "dropped".
-        ${dockerComposeRef "cap_add-cap_drop"}
 
         Omitted and `null` capabilities will therefore be set
         according to Docker's ${
           link "https://docs.docker.com/engine/reference/run/#runtime-privilege-and-linux-capabilities"
                "default list of capabilities."
         }
+
+        ${serviceRef "cap_add"}
+        ${serviceRef "cap_drop"}
       '';
     };
   };
@@ -289,8 +329,9 @@ in
       volumes
       environment
       sysctls
-      image
       ;
+  } // lib.optionalAttrs (config.service.image != null) {
+    inherit (config.service) image;
   } // lib.optionalAttrs (config.service.build.context != null) {
     inherit (config.service) build;
   } // lib.optionalAttrs (cap_add != []) {
@@ -331,8 +372,10 @@ in
     inherit (config.service) privileged;
   } // lib.optionalAttrs (config.service.network_mode != null) {
     inherit (config.service) network_mode;
-  } // lib.optionalAttrs (config.service.networks != null) {
-    inherit (config.service) networks;
+  } // lib.optionalAttrs (config.service.networks != [] && config.service.networks != {}) {
+    networks =
+      if (builtins.isAttrs config.service.networks) then builtins.mapAttrs (_: v: v._out) config.service.networks
+      else config.service.networks;
   } // lib.optionalAttrs (config.service.restart != null) {
     inherit (config.service) restart;
   } // lib.optionalAttrs (config.service.stop_signal != null) {
